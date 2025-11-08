@@ -276,11 +276,8 @@ export default function DemoPage() {
         <header className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                AI Email Outreach Platform
-              </h1>
               <p className="text-sm text-gray-600 mt-2">
-                Generate personalized email variations powered by AI. Compare variants, analyze performance, and export your campaigns.
+                Generate personalized email variations powered by AI. Compare variants, analyze performance.
               </p>
             </div>
             <div className="text-right">
