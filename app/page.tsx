@@ -2,6 +2,51 @@
 import React, { useEffect, useState } from "react";
 import DOMPurify from "dompurify";
 
+// Loading Spinner Component
+function LoadingSpinner({ size = "md", className = "" }: { size?: "sm" | "md" | "lg"; className?: string }) {
+  const sizeClasses = {
+    sm: "w-4 h-4",
+    md: "w-6 h-6",
+    lg: "w-8 h-8",
+  };
+  
+  return (
+    <div className={`inline-block ${className}`}>
+      <svg
+        className={`animate-spin ${sizeClasses[size]} text-indigo-600`}
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          className="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          strokeWidth="4"
+        ></circle>
+        <path
+          className="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        ></path>
+      </svg>
+    </div>
+  );
+}
+
+// Pulsing dots loader
+function PulsingDots() {
+  return (
+    <div className="flex items-center gap-1">
+      <span className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse"></span>
+      <span className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse" style={{ animationDelay: "0.2s" }}></span>
+      <span className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse" style={{ animationDelay: "0.4s" }}></span>
+    </div>
+  );
+}
+
 function createSanitizedMarkup(html: string) {
   // DOMPurify.sanitize removes scripts and unsafe attributes.
   // You can pass options to allow/deny tags or attributes if needed.
@@ -359,23 +404,29 @@ export default function DemoPage() {
         {batchProgress && (
           <div className="bg-white rounded-lg shadow p-4 mb-6 border-l-4 border-blue-500">
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="font-semibold">Sending Emails...</h3>
+              <h3 className="font-semibold flex items-center gap-2">
+                <LoadingSpinner size="sm" />
+                Sending Emails...
+              </h3>
               <span className="text-sm text-gray-600">
                 {batchProgress.completed + batchProgress.failed} / {batchProgress.total}
               </span>
             </div>
             {batchProgress.current && (
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-gray-600 mb-2 flex items-center gap-2">
+                <span className="inline-block w-2 h-2 bg-blue-600 rounded-full animate-pulse"></span>
                 Currently processing: <strong>{batchProgress.current}</strong>
               </p>
             )}
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
               <div
-                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 relative"
                 style={{
                   width: `${((batchProgress.completed + batchProgress.failed) / batchProgress.total) * 100}%`,
                 }}
-              ></div>
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-shimmer"></div>
+              </div>
             </div>
           </div>
         )}
@@ -388,15 +439,18 @@ export default function DemoPage() {
                 <button
                   onClick={handleBatchSend}
                   disabled={batchSending}
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-70 disabled:cursor-not-allowed font-medium flex items-center gap-2"
                 >
+                  {batchSending && <LoadingSpinner size="sm" className="text-white" />}
                   {batchSending ? `Sending... (${batchProgress?.completed || 0}/${batchProgress?.total || 0})` : `Send to ${selectedLeadIds.size} Lead${selectedLeadIds.size > 1 ? "s" : ""}`}
                 </button>
               )}
               <button
                 onClick={fetchLeads}
-                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                disabled={loadingLeads}
+                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
               >
+                {loadingLeads && <LoadingSpinner size="sm" className="text-white" />}
                 {loadingLeads ? "Refreshing..." : "Refresh"}
               </button>
             </div>
@@ -463,6 +517,16 @@ export default function DemoPage() {
                     </td>
                   </tr>
                 ))}
+                {loadingLeads && leads.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="py-8 text-center">
+                      <div className="flex flex-col items-center justify-center gap-3">
+                        <LoadingSpinner size="lg" />
+                        <div className="text-gray-600">Loading leads...</div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
             {leads.length === 0 && !loadingLeads && <div className="p-4 text-sm text-gray-500">No leads found.</div>}
@@ -538,10 +602,20 @@ export default function DemoPage() {
                 <div className="col-span-7">
                   <div className="mb-2 flex items-center justify-between">
                     <div className="text-sm text-gray-600">Generated Variations</div>
-                    <div className="text-sm text-gray-500">{loadingPreview ? "Generating…" : `Showing ${preview?.variants.length ?? 0} variants`}</div>
+                    <div className="text-sm text-gray-500 flex items-center gap-2">
+                      {loadingPreview && <LoadingSpinner size="sm" />}
+                      {loadingPreview ? "Generating…" : `Showing ${preview?.variants.length ?? 0} variants`}
+                    </div>
                   </div>
 
-                  {loadingPreview && <div className="p-6 border rounded bg-gray-50 text-gray-500">Generating personalized variations…</div>}
+                  {loadingPreview && (
+                    <div className="p-6 border rounded bg-gray-50 flex flex-col items-center justify-center gap-4 min-h-[200px]">
+                      <LoadingSpinner size="lg" />
+                      <div className="text-gray-600 font-medium">Generating personalized variations</div>
+                      <PulsingDots />
+                      <div className="text-sm text-gray-500">This may take a few moments...</div>
+                    </div>
+                  )}
 
                   {preview && (
                     <div>
@@ -571,8 +645,22 @@ export default function DemoPage() {
                       </div>
 
                       <div className="mt-3 flex items-center gap-3">
-                        <button onClick={handleRegenerate} className="px-3 py-1 border rounded">Regenerate</button>
-                        <button onClick={handleSend} disabled={sending} className="px-4 py-2 bg-green-600 text-white rounded disabled:opacity-60">{sending ? "Sending…" : "Send Email"}</button>
+                        <button 
+                          onClick={handleRegenerate} 
+                          disabled={loadingPreview}
+                          className="px-3 py-1 border rounded hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                          {loadingPreview && <LoadingSpinner size="sm" />}
+                          Regenerate
+                        </button>
+                        <button 
+                          onClick={handleSend} 
+                          disabled={sending || loadingPreview} 
+                          className="px-4 py-2 bg-green-600 text-white rounded disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                          {sending && <LoadingSpinner size="sm" className="text-white" />}
+                          {sending ? "Sending…" : "Send Email"}
+                        </button>
                       </div>
                     </div>
                   )}
